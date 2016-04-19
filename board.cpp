@@ -6,8 +6,6 @@
 #include <string>
 #include <iostream>
 
-
-
 void print_board(int **input, int dim, int inner_dim){
     std::string line = "";
     for (int i = 0; i < inner_dim; i++){

@@ -5,7 +5,7 @@ SudokuMP - C++ and OpenMP
 
 Parallelized Sudoku Solver project for final project in 15-418.
 
-### USAGE
+### Usage
 
 To compile code:
 
