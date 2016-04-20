@@ -23,6 +23,29 @@ void print_board(int **input, int dim, int inner_dim){
     std::cout << line;
 }
 
+bool check_move(int **input, int dim, int inner_dim, int row, int col, int num){
+	for (int i = 0; i < dim; i++){
+		if (input[i][col] == num){
+			return 0;
+		}
+		else if (input[row][i] == num){
+			return 0;
+		}
+	}
+
+	int box_row = (row - (row % inner_dim));
+	int box_col = (col - (col % inner_dim));
+
+	for (int new_row = box_row; new_row < (box_row + inner_dim); new_row++){
+		for (int new_col = box_col; new_box < (box_col + inner_dim); new_col++){
+			if (input[new_row][new_col] == num){
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
 int main(int argc, const char* argv[]){
 	if (argc == 3){
 		int path_max;
