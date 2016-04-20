@@ -1,0 +1,106 @@
+struct board {
+  int dim;
+  int** cells; // dim x dim array of possible values encoded as int
+  short** solution; // dim x dim array containing solution
+  bool** old_changed; // dim x dim array whether or not cell was changed in last iteration
+  bool** new_changed; // dim x dim array whether or not cell was changed in this iteration
+} Board;
+
+Board* sudoku;
+
+enum Align {ROW, COL, BLOCK};
+
+int get_cells(int i, int j, Align alignment); // Get value in cells
+void update_cells(int i, int j, Align alignment, int value); // Update cells and new_changed
+void update_solution(int i, int j, Align alignment, int value); // Update solution and new_changed
+void is_solved(int i, int j, Align alignment); // Value in block/row/col i index j is solved
+
+bool has_changed(int i, Align alignment); // Something in block/row/col i has changed in old_changed
+bool nothing_has_changed(); // Array old_changed is all zeroes
+void clear_changed(); // Swap old_changed and new_changed, clear new_changed
+
+
+--------------------------------------------------------------------------------------------------------------------
+
+/* Solve block/row/col i index j if can eliminate
+ * Call update_solution and remove value from all other cells
+ * Return true if eliminated
+ */
+bool elimination(int i, int j, Align alignment) {
+  value = get_cells(i, j, alignment);
+  if value is 2^n for some natural number n {
+    update_solution(i, j, alignment, n+1);
+    for each cell k in i where k != j:
+      eliminate n+1 from its value in cells
+  }
+}
+
+
+--------------------------------------------------------------------------------------------------------------------
+
+
+/* Solve one interation for thread i 
+ * Thread i - in charge of block i, row i, and col i
+ *   Block layout:
+ *     0 1 2
+ *     3 4 5
+ *     6 7 8
+*/
+void solve_block(int i) {
+  if nothing_has_changed
+    brute_force();
+
+  if has_changed(i, BLOCK) {
+    for each cell j in block i:
+      if !is_solved(i, j, BLOCK)
+        elimination(i, j, &value);
+  }
+
+  loneranger_twins_triplets(i, ROW);
+  loneranger_twins_triplets(i, COL);
+  loneranger_twins_triplets(i, BLOCK);
+}
+
+
+---------------------------------------------------------------------------------------------------------------------
+
+
+/* Solve lone ranger, twins, and triplets over block, row, and col i */
+void loneranger_twins_triplets(int i) {
+  int loneranger_tally[dim];
+  int loneranger_indices[dim];
+  
+  hashmap twins; // Map twins value -> index of first occurrence
+
+  hashmap triplets; // Map triplets value -> index of first and second occurrence
+
+  for ROW, COL, and BLOCK:
+    for each cell j in alignment i:
+      /* Lone Ranger */
+      add all possible values in j to loneranger_tally[dim];
+      change loneranger_indices[dim] to j for all updated values;
+
+    
+      /* Twins */
+      if j has exactly two possible values:
+        if value at j is in hashmap twins
+          Remove all instances of these values from other cells;
+
+      /* Triplets */
+      if j has exactly three possible values:
+        if value at j is in hashmap triplets twice
+          Remove all instances of these values from other cells;
+        else if value at j is in hashmap triplets once
+          Add value -> j into hashmap;
+
+    return;
+}
+
+
+----------------------------------------------------------------------------------------------------------------------
+
+void brute_force(); // TODO: Figure out guessing mechanism
+
+void read_board(string filename); // Read input from file and populate Board* sudoku
+
+void start_solver(); // Divide the work into dim threads using OpenMP
