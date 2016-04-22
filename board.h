@@ -1,4 +1,11 @@
 #include <stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <math.h>
+#include <string>
+#include <iostream>
+#include <time.h>
 
 static struct board
 {
@@ -14,3 +21,4 @@ static struct board
 /* Board functions here */
 void print_board(int **input, int dim, int inner_dim);
 bool check_move(int **input, int dim, int inner_dim, int row, int col, int num);
+bool brute_force(int** input, int dim, int inner_dim, int row, int col);

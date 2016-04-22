@@ -1,26 +1,24 @@
 #include "board.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <limits.h>
-#include <math.h>
-#include <string>
-#include <iostream>
+
 
 void print_board(int **input, int dim, int inner_dim){
-    std::string line = "";
-    for (int i = 0; i < inner_dim; i++){
-        for (int j = 0; j < dim; j++){
-            for (int k = 0; k < inner_dim; k++){
-                line += (" " + std::to_string(input[k*i][j]) + " ");
-            }
-            line += " ";
-            if ((j+1) % inner_dim == 0){
-                line += "\n";
-            }
-        }
-        line += "\n";
-    }
-    std::cout << line;
+	for (int row = 0; row < dim; row++){
+		for (int col = 0; col < dim; col++){
+			if (col % inner_dim == inner_dim-1 && col != dim-1){
+				std::cout << input[row][col] << "  ";
+			}
+			else{
+				std::cout << input[row][col] << " ";
+			}
+		}
+		if (row % inner_dim == inner_dim-1 && row != dim-1){
+			std::cout << std::endl;
+			std::cout << std::endl;
+		}
+		else{
+			std::cout << std::endl;
+		}
+	}
 }
 
 bool check_move(int **input, int dim, int inner_dim, int row, int col, int num){
@@ -37,13 +35,39 @@ bool check_move(int **input, int dim, int inner_dim, int row, int col, int num){
 	int box_col = (col - (col % inner_dim));
 
 	for (int new_row = box_row; new_row < (box_row + inner_dim); new_row++){
-		for (int new_col = box_col; new_box < (box_col + inner_dim); new_col++){
+		for (int new_col = box_col; new_col < (box_col + inner_dim); new_col++){
 			if (input[new_row][new_col] == num){
 				return false;
 			}
 		}
 	}
 	return true;
+}
+
+bool brute_force(int **input, int dim, int inner_dim, int row, int col){
+	//std::cout<<col;
+	if (col >= dim){
+		row++;
+		col = 0;
+		if (row >= dim){
+			return true;
+		}
+	}
+	if (input[row][col] != 0){
+		return brute_force(input, dim, inner_dim, row, col+1);
+	}
+	else{
+		for (int num = 1; num <= dim; num++){
+			if (check_move(input, dim, inner_dim, row, col, num)){
+				input[row][col] = num;
+				if (brute_force(input, dim, inner_dim, row, col+1)){
+					return true;
+				}
+			}
+		}
+	}
+	input[row][col] = 0;
+	return false;
 }
 
 int main(int argc, const char* argv[]){
@@ -76,6 +100,12 @@ int main(int argc, const char* argv[]){
 			Board.inner_dim = (int)sqrt(Board.dim);
 		}
 		int **input;
+
+		input = (int **)calloc(Board.dim, sizeof(int*));
+		for (int i = 0; i < Board.dim; i++){
+			input[i] = (int *)calloc(Board.dim, sizeof(int));
+		}
+
 		FILE *file = fopen(rp, "r");
 		if (!file) return 0;
 
@@ -84,7 +114,21 @@ int main(int argc, const char* argv[]){
 				fscanf(file, "%d", &input[row][col]);
 			}
 		}
+
 		print_board(input, Board.dim, Board.inner_dim);
+		std::cout << "\n-----------------------------------\n";
+		clock_t t = clock();
+		if (brute_force(input, Board.dim, Board.inner_dim, 0, 0)){
+			print_board(input, Board.dim, Board.inner_dim);
+		}
+		else{
+			std::cout << "Error: Sudoku board is unsolvable";
+		}
+		t = clock()-t;
+		std::cout << "\n\n";
+		std::cout << "Runtime: ";
+		std::cout << ((float)t)/CLOCKS_PER_SEC;
+		std::cout << " seconds\n";
 	}
 	else {
 		std::cerr << "Error: No text file path for puzzle included.";
