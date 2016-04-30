@@ -8,8 +8,15 @@ struct Board
     inner_dim = (int)sqrt(d);
 
     cells = new int*[dim];
-    for(int r = 0; r < dim; r++)
+    solution = new int*[dim];
+    old_changed = new bool*[dim];
+    new_changed = new bool*[dim];
+    for(int r = 0; r < dim; r++) {
       cells[r] = new int[dim];
+      solution[r] = new int[dim];
+      old_changed[r] = new bool[dim];
+      new_changed[r] = new bool[dim];
+    }
   }
 
   int dim;

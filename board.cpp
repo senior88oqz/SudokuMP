@@ -6,20 +6,33 @@
 #include <iostream>
 #include <sstream>
 
+enum Align {ROW, COL, BLOCK};
+
+void index_to_row_col(int i, int j, Align align, int &row, int &col) {
+  if (align == ROW) {
+    row = i;
+    col = j;
+  } else if (align == COL) {
+    row = j;
+    col = i;
+  } else {
+    row = (i / board->inner_dim) + (j / board->inner_dim);
+    col = (i % board->inner_dim) + (j % board->inner_dim);
+  }
+}
+
 void print_board(){
     std::string line = "";
     std::ostringstream stm;
-    for (int i = 0; i < board->inner_dim; i++){
-        for (int j = 0; j < board->dim; j++){
-            for (int k = 0; k < board->inner_dim; k++){
-              stm << board->cells[k*i][j];
-              stm << " ";
-            }
-            stm << " ";
-            if ((j+1) % board->inner_dim == 0){
-                stm << "\n";
-            }
-        }
+    for(int r = 0; r < board->dim; r++) {
+      for(int c = 0; c < board->dim; c++) {
+        stm << board->solution[r][c];
+        stm << " ";
+        if((c+1) % board->inner_dim == 0)
+          stm << " ";
+      }
+      stm << "\n";
+      if((r+1) % board->inner_dim == 0)
         stm << "\n";
     }
     std::cout << stm.str();
@@ -58,12 +71,25 @@ bool create_board(const char* filename, int dim) {
   for(int row = 0; row < dim; row++) {
     for(int col = 0; col < dim; col++) {
       fscanf(file, "%d", &num);
-      bits = 1 << num;
+      if(num == 0)
+        bits = (1 << dim) - 1;
+      else
+        bits = 1 << (num-1);
       board->solution[row][col] = num;
       board->cells[row][col] = bits;
     }
   }
   return 1;
+}
+
+void solve() {
+  for(int thread_id = 0; thread_id < board->dim; thread_id++) {
+
+
+
+  }
+
+
 }
 
 int main(int argc, const char* argv[]){
@@ -92,6 +118,7 @@ int main(int argc, const char* argv[]){
 			std::cerr << "Error: Dimension is not a perfect square.\n";
 			return 0;
 		}
+
     if (!create_board((const char*) rp, dim)) {
       std::cerr << "Error: Problem in create_board.\n";
       return 0;
