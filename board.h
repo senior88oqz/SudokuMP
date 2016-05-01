@@ -41,7 +41,10 @@ struct Board
 /* Global board struct */
 Board* board;
 
-/* Prints the board */
+/* Prints the cells of possible values */
+void print_cells();
+
+/* Prints the solution board */
 void print_board();
 
 /* Creates a board with initialized values, store in global variable */

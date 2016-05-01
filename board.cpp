@@ -67,6 +67,17 @@ void clear_number(int i, Align align, int value) {
   }
 }
 
+/* Update board->solution[row][col] with value
+ * Clear value from all neighboring cells
+ */
+void update_solution(int row, int col, int num) {
+  int id = board->inner_dim;
+  board->solution[row][col] = num;
+  clear_number(row, ROW, num);
+  clear_number(col, COL, num);
+  clear_number((row/id)*id + (col/id), BLOCK, num);
+}
+
 
 /* Test is elimination is possible (i.e. 010000000 -> 8)
  * If possible, update solution and remove num from row, col, and block
@@ -77,16 +88,16 @@ bool elimination(int i, int j, Align align) {
 
   if (!board->solution[row][col] && board->old_changed[row][col]) {
     value = board->cells[row][col];
+    if(value == 0) {
+      std::cerr << "No values left\n";
+    }
     while(value % 2 == 0) {
       value = value/2;
       num++;
     }
     if(value == 1) {
       int id = board->inner_dim;
-      board->solution[row][col] = num;
-      clear_number(row, ROW, num);
-      clear_number(col, COL, num);
-      clear_number((row/id)*id + (col/id), BLOCK, num);
+      update_solution(row, col, num);
       return 1;
     }
   }
@@ -94,15 +105,59 @@ bool elimination(int i, int j, Align align) {
 
 }
 
+/* Solve row/col/block i using lone ranger, twins, and triplets */
 void loneranger_twins_triplets(int i, Align align) {
+  int mask, value, row, col;
 
+  // Data structure for lone rangers
+  int num_found[board->dim], row_found[board->dim], col_found[board->dim];
+  for(int num = 0; num < board->dim; num++) {
+    num_found[num] = 0;
+  }
+
+  for(int j = 0; j < board->dim; j++) {
+    index_to_row_col(i, j, align, row, col);
+    if(!board->solution[row][col] && board->old_changed[row][col]) {
+      mask = 1;
+      for(int num = 0; num < board->dim; num++) {
+        if(board->cells[row][col] & mask) {
+          num_found[num]++;
+          row_found[num] = row;
+          col_found[num] = col;
+        }
+        mask *= 2;
+      }
+    }
+  }
+  for(int num = 0; num < board->dim; num++) {
+    if(num_found[num] == 1) {
+      update_solution(row_found[num], col_found[num], num+1);
+    }
+  }
 }
 
 /********************************************************************/
 
 
+void print_cells() {
+  std::ostringstream stm;
+  for(int r = 0; r < board->dim; r++) {
+    for(int c = 0; c < board->dim; c++) {
+      for(int shift = (int)pow(2.0, (board->dim-1)); shift > 0; shift >>= 1) {
+        stm << ((board->cells[r][c] & shift) == shift) ? 1 : 0;
+      }
+      stm << " ";
+      if((c+1) % board->inner_dim == 0)
+        stm << " ";
+    }
+    stm << "\n";
+    if((r+1) % board->inner_dim == 0)
+      stm << "\n";
+  }
+  std::cout << stm.str();
+}
+
 void print_board(){
-    std::string line = "";
     std::ostringstream stm;
     for(int r = 0; r < board->dim; r++) {
       for(int c = 0; c < board->dim; c++) {
@@ -167,10 +222,7 @@ bool create_board(const char* filename, int dim) {
   for(int row = 0; row < dim; row++) {
     for(int col = 0; col < dim; col++) {
       if(board->solution[row][col]) {
-        int num = board->solution[row][col];
-        clear_number(row, ROW, num);
-        clear_number(col, COL, num);
-        clear_number((row/id)*id + (col/id), BLOCK, num);
+        update_solution(row, col, board->solution[row][col]);
       }
     }
   }
@@ -184,7 +236,6 @@ void solve_block(int i) {
   for(int j = 0; j < board->dim; j++) {
     elimination(i, j, BLOCK);
   }
-
   loneranger_twins_triplets(i, ROW);
   loneranger_twins_triplets(i, COL);
   loneranger_twins_triplets(i, BLOCK);
@@ -200,6 +251,7 @@ void solve() {
   for(int thread_id = 0; thread_id < board->dim; thread_id++) {
     solve_block(thread_id);
   }
+  clear_changed();
 
 
 }
@@ -236,6 +288,8 @@ int main(int argc, const char* argv[]){
       return 0;
     }
 
+    print_board();
+    print_cells();
     solve();
 
 		print_board();
