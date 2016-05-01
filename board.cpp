@@ -252,8 +252,30 @@ void solve() {
     solve_block(thread_id);
   }
   clear_changed();
+}
 
-
+bool brute_force(int** input, int dim, int inner_dim, int row, int col){
+	//std::cout<<col;
+	if (col >= dim){
+		row++;
+		col = 0;
+		if (row >= dim){
+			return true;
+		}
+	}
+	if (input[row][col] != 0){
+		return brute_force(input, dim, inner_dim, row, col+1);
+	}
+  for (int num = 1; num <= dim; num++){
+		if (check_move(input, dim, inner_dim, row, col, num)){
+		  input[row][col] = num;
+		  if (brute_force(input, dim, inner_dim, row, col+1)){
+				return true;
+		  }
+		}
+  }
+	input[row][col] = 0;
+	return false;
 }
 
 int main(int argc, const char* argv[]){
@@ -283,6 +305,7 @@ int main(int argc, const char* argv[]){
 			return 0;
 		}
 
+
     if (!create_board((const char*) rp, dim)) {
       std::cerr << "Error: Problem in create_board.\n";
       return 0;
@@ -292,7 +315,21 @@ int main(int argc, const char* argv[]){
     print_cells();
     solve();
 
+    std::cout<< "SOLVED BOARD: \n";
 		print_board();
+
+		//clock_t t = clock();
+		//if (brute_force(input, Board.dim, Board.inner_dim, 0, 0)){
+			//print_board(input, Board.dim, Board.inner_dim);
+		//}
+		//else{
+			//std::cout << "Error: Sudoku board is unsolvable";
+		//}
+		//t = clock()-t;
+		//std::cout << "\n\n";
+		//std::cout << "Runtime: ";
+		//std::cout << ((float)t)/CLOCKS_PER_SEC;
+		//std::cout << " seconds\n";
 	}
 	else {
 		std::cerr << "Error: No text file path for puzzle included.";

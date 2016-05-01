@@ -1,5 +1,10 @@
+#include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <math.h>
+#include <string>
+#include <iostream>
+#include <time.h>
 
 struct Board
 {
@@ -54,3 +59,6 @@ bool create_board(char* filename, int dim);
 void solve();
 
 bool check_move(int **input, int dim, int inner_dim, int row, int col, int num);
+
+bool brute_force(int** input, int dim, int inner_dim, int row, int col);
+
