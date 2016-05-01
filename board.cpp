@@ -29,10 +29,10 @@ bool nothing_has_changed() {
   for(int r = 0; r < board->dim; r++) {
     for(int c = 0; c < board->dim; c++) {
       if (board->old_changed[r][c])
-        return 1;
+        return 0;
     }
   }
-  return 0;
+  return 1;
 }
 
 /* Swap old_changed and new_changed, clear new_changed */
@@ -75,7 +75,7 @@ bool elimination(int i, int j, Align align) {
   int row, col, value, num = 1;
   index_to_row_col(i, j, align, row, col);
 
-  if (!board->solution[row][col]) {
+  if (!board->solution[row][col] && board->old_changed[row][col]) {
     value = board->cells[row][col];
     while(value % 2 == 0) {
       value = value/2;
@@ -87,8 +87,14 @@ bool elimination(int i, int j, Align align) {
       clear_number(row, ROW, num);
       clear_number(col, COL, num);
       clear_number((row/id)*id + (col/id), BLOCK, num);
+      return 1;
     }
   }
+  return 0;
+
+}
+
+void loneranger_twins_triplets(int i, Align align) {
 
 }
 
@@ -155,14 +161,44 @@ bool create_board(const char* filename, int dim) {
       board->new_changed[row][col] = 0;
     }
   }
+
+  // Reset cells based on numbers given
+  int id = board->inner_dim;
+  for(int row = 0; row < dim; row++) {
+    for(int col = 0; col < dim; col++) {
+      if(board->solution[row][col]) {
+        int num = board->solution[row][col];
+        clear_number(row, ROW, num);
+        clear_number(col, COL, num);
+        clear_number((row/id)*id + (col/id), BLOCK, num);
+      }
+    }
+  }
   return 1;
 }
 
+/* Solve using block using elimination, lone ranger, twins, and triplets
+ * If nothing has changed, use brute force
+ */
+void solve_block(int i) {
+  for(int j = 0; j < board->dim; j++) {
+    elimination(i, j, BLOCK);
+  }
+
+  loneranger_twins_triplets(i, ROW);
+  loneranger_twins_triplets(i, COL);
+  loneranger_twins_triplets(i, BLOCK);
+}
+
 void solve() {
+  if (nothing_has_changed()) {
+    // Brute force solution
+    return;
+  }
+
+  // Repeat this loop while not solved
   for(int thread_id = 0; thread_id < board->dim; thread_id++) {
-
-
-
+    solve_block(thread_id);
   }
 
 
@@ -200,7 +236,7 @@ int main(int argc, const char* argv[]){
       return 0;
     }
 
-    // Solve board here
+    solve();
 
 		print_board();
 	}
