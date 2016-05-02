@@ -11,16 +11,13 @@ struct Board
   Board(int d = 9) {
     dim = d;
     inner_dim = (int)sqrt(d);
+    cells_solved = 0;
 
     cells = new int*[dim];
     solution = new int*[dim];
-    old_changed = new bool*[dim];
-    new_changed = new bool*[dim];
     for(int r = 0; r < dim; r++) {
       cells[r] = new int[dim];
       solution[r] = new int[dim];
-      old_changed[r] = new bool[dim];
-      new_changed[r] = new bool[dim];
     }
   }
 
@@ -36,11 +33,8 @@ struct Board
   // solution = dim x dim board containing solutions
   int** solution;
 
-  // old_changed = whether or not a cell changed on the last iteration
-  bool** old_changed;
-
-  //new_changed = whether or not a cell changed on this iteration
-  bool** new_changed;
+  // Number of cells solved
+  int cells_solved;
 };
 
 /* Global board struct */

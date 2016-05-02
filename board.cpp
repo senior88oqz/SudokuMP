@@ -24,30 +24,6 @@ void index_to_row_col(int i, int j, Align align, int &row, int &col) {
   }
 }
 
-/* Return true if old_changed is all zeroes */
-bool nothing_has_changed() {
-  for(int r = 0; r < board->dim; r++) {
-    for(int c = 0; c < board->dim; c++) {
-      if (board->old_changed[r][c])
-        return 0;
-    }
-  }
-  return 1;
-}
-
-/* Swap old_changed and new_changed, clear new_changed */
-void clear_changed() {
-  bool** temp = board->new_changed;
-  board->new_changed = board->old_changed;
-  board->old_changed = temp;
-
-  for(int r = 0; r < board->dim; r++) {
-    for(int c = 0; c < board->dim; c++) {
-      board->new_changed = 0;
-    }
-  }
-}
-
 /* Remove all instances of value from row/col/block i */
 void clear_number(int i, Align align, int value) {
   int mask = ~ (1 << (value-1));
@@ -73,6 +49,7 @@ void clear_number(int i, Align align, int value) {
 void update_solution(int row, int col, int num) {
   int id = board->inner_dim;
   board->solution[row][col] = num;
+  board->cells_solved++;
   clear_number(row, ROW, num);
   clear_number(col, COL, num);
   clear_number((row/id)*id + (col/id), BLOCK, num);
@@ -86,7 +63,7 @@ bool elimination(int i, int j, Align align) {
   int row, col, value, num = 1;
   index_to_row_col(i, j, align, row, col);
 
-  if (!board->solution[row][col] && board->old_changed[row][col]) {
+  if (!board->solution[row][col]) {
     value = board->cells[row][col];
     if(value == 0) {
       std::cerr << "No values left\n";
@@ -105,9 +82,11 @@ bool elimination(int i, int j, Align align) {
 
 }
 
-/* Solve row/col/block i using lone ranger, twins, and triplets */
-void loneranger_twins_triplets(int i, Align align) {
-  int mask, value, row, col;
+/* Solve row/col/block i using lone ranger
+ * Return true if something changed
+ */
+bool loneranger(int i, Align align) {
+  int mask, value, row, col, ret = 0;
 
   // Data structure for lone rangers
   int num_found[board->dim], row_found[board->dim], col_found[board->dim];
@@ -117,7 +96,7 @@ void loneranger_twins_triplets(int i, Align align) {
 
   for(int j = 0; j < board->dim; j++) {
     index_to_row_col(i, j, align, row, col);
-    if(!board->solution[row][col] && board->old_changed[row][col]) {
+    if(!board->solution[row][col]) {
       mask = 1;
       for(int num = 0; num < board->dim; num++) {
         if(board->cells[row][col] & mask) {
@@ -131,9 +110,11 @@ void loneranger_twins_triplets(int i, Align align) {
   }
   for(int num = 0; num < board->dim; num++) {
     if(num_found[num] == 1) {
+      ret = 1;
       update_solution(row_found[num], col_found[num], num+1);
     }
   }
+  return ret;
 }
 
 /********************************************************************/
@@ -170,6 +151,7 @@ void print_board(){
       if((r+1) % board->inner_dim == 0)
         stm << "\n";
     }
+    stm << "CELLS SOLVED: " << board->cells_solved << "\n";
     std::cout << stm.str();
 }
 
@@ -212,8 +194,6 @@ bool create_board(const char* filename, int dim) {
         bits = 1 << (num-1);
       board->solution[row][col] = num;
       board->cells[row][col] = bits;
-      board->old_changed[row][col] = 1;
-      board->new_changed[row][col] = 0;
     }
   }
 
@@ -229,29 +209,30 @@ bool create_board(const char* filename, int dim) {
   return 1;
 }
 
-/* Solve using block using elimination, lone ranger, twins, and triplets
- * If nothing has changed, use brute force
- */
-void solve_block(int i) {
-  for(int j = 0; j < board->dim; j++) {
-    elimination(i, j, BLOCK);
-  }
-  loneranger_twins_triplets(i, ROW);
-  loneranger_twins_triplets(i, COL);
-  loneranger_twins_triplets(i, BLOCK);
-}
-
 void solve() {
-  if (nothing_has_changed()) {
-    // Brute force solution
-    return;
-  }
+  bool changed = 0;
+  int total = board->dim * board->dim;
+  while(board->cells_solved < total) {
+    changed = 0;
+    for(int thread_id = 0; thread_id < board->dim; thread_id++) {
+      for(int j = 0; j < board->dim; j++) {
+       changed |= elimination(thread_id, j, BLOCK);
+      }
+    }
 
-  // Repeat this loop while not solved
-  for(int thread_id = 0; thread_id < board->dim; thread_id++) {
-    solve_block(thread_id);
+    if(!changed) {
+      for(int thread_id = 0; thread_id < board->dim; thread_id++) {
+        changed |= loneranger(thread_id, ROW);
+        changed |= loneranger(thread_id, COL);
+        changed |= loneranger(thread_id, BLOCK);
+      }
+    }
+
+    if(!changed) {
+      //Brute force needed
+      return;
+    }
   }
-  clear_changed();
 }
 
 bool brute_force(int** input, int dim, int inner_dim, int row, int col){
