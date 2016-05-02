@@ -162,41 +162,51 @@ bool twins(int i, Align align) {
 bool triplets(int i, Align align) {
   int ret = 0, row, col, row_found[3], col_found[3], num_found;
 
-  for(int num1 = 0; num1 < board->dim; num1++) {
-    for(int num2 = num1+1; num2 < board->dim; num2++) {
-      for(int num3 = num2+1; num3 < board->dim; num3++) {
-        num_found = 0;
-        for(int j = 0; j < board->dim; j++) {
-          index_to_row_col(i, j, align, row, col);
-          if(!board->solution[row][col]) {
-            if(board->cells[row][col][num1] && board->cells[row][col][num2]
-                && board->cells[row][col][num3]) {
-              num_found++;
-              if(num_found > 3) break;
-              row_found[num_found-1] = row;
-              col_found[num_found-1] = col;
-            } else if(board->cells[row][col][num1] ||
-                      board->cells[row][col][num2] ||
-                      board->cells[row][col][num3]) {
-              num_found = 0;
-              break;
+  // Only considered unsolved numbers
+  bool unsolved[board->dim];
+  for(int j = 0; j < board->dim; j++)
+    unsolved[j] = 1;
+
+  for(int j = 0; j < board->dim; j++) {
+    index_to_row_col(i, j, align, row, col);
+    if(board->solution[row][col]) {
+      unsolved[board->solution[row][col]-1] = 0;
+    }
+  }
+
+  for(int idx1 = 0; idx1 < board->dim; idx1++) {
+    for(int idx2 = idx1+1; idx2 < board->dim; idx2++) {
+      for(int idx3 = idx2+1; idx3 < board->dim; idx3++) {
+        if(unsolved[idx1] && unsolved[idx2] && unsolved[idx3]) {
+          num_found = 0;
+          for(int j = 0; j < board->dim; j++) {
+            index_to_row_col(i, j, align, row, col);
+            if(!board->solution[row][col]) {
+              if(board->cells[row][col][idx1] ||
+                 board->cells[row][col][idx2] ||
+                 board->cells[row][col][idx3]) {
+                num_found++;
+                if(num_found > 3) break;
+                row_found[num_found-1] = row;
+                col_found[num_found-1] = col;
+              }
             }
           }
-        }
-        if(num_found == 3) {
-          for(int num = 0; num < board->dim; num++) {
-            if(num != num1 && num != num2 && num != num3) {
-              if(board->cells[row_found[0]][col_found[0]][num]) {
-                board->cells[row_found[0]][col_found[0]][num] = 0;
-                ret = 1;
-              }
-              if(board->cells[row_found[1]][col_found[1]][num]) {
-                board->cells[row_found[1]][col_found[1]][num] = 0;
-                ret = 1;
-              }
-              if(board->cells[row_found[2]][col_found[2]][num]) {
-                board->cells[row_found[2]][col_found[2]][num] = 0;
-                ret = 1;
+          if(num_found == 3) {
+            for(int num = 0; num < board->dim; num++) {
+              if(num != idx1 && num != idx2 && num != idx3) {
+                if(board->cells[row_found[0]][col_found[0]][num]) {
+                  board->cells[row_found[0]][col_found[0]][num] = 0;
+                  ret = 1;
+                }
+                if(board->cells[row_found[1]][col_found[1]][num]) {
+                  board->cells[row_found[1]][col_found[1]][num] = 0;
+                  ret = 1;
+                }
+                if(board->cells[row_found[2]][col_found[2]][num]) {
+                  board->cells[row_found[2]][col_found[2]][num] = 0;
+                  ret = 1;
+                }
               }
             }
           }
@@ -204,8 +214,9 @@ bool triplets(int i, Align align) {
       }
     }
   }
-  if(ret)
+  if(ret) {
     std::cout << "FOUND TRIPLET\n";
+  }
   return ret;
 }
 
