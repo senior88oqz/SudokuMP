@@ -13,10 +13,13 @@ struct Board
     inner_dim = (int)sqrt(d);
     cells_solved = 0;
 
-    cells = new int*[dim];
+    cells = new bool**[dim];
     solution = new int*[dim];
     for(int r = 0; r < dim; r++) {
-      cells[r] = new int[dim];
+      cells[r] = new bool*[dim];
+      for(int c = 0; c < dim; c++) {
+        cells[r][c] = new bool[dim];
+      }
       solution[r] = new int[dim];
     }
   }
@@ -25,10 +28,9 @@ struct Board
 
   int inner_dim;
 
-  // cells = dim x dim array of ints, each is a bit vector of possible values
-  // i.e. 010000000 = 8 is the value of the cell
-  // i.e. 010011010 = 2, 4, 5, 8 are possible values of cell
-  int** cells;
+  // cells = dim x dim x dim array of bools representing possible values
+  // If values are all zero, then the cell must be solved
+  bool*** cells;
 
   // solution = dim x dim board containing solutions
   int** solution;

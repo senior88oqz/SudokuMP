@@ -39,7 +39,7 @@ bool elimination(int i, int j, Align alignment) {
 --------------------------------------------------------------------------------------------------------------------
 
 
-/* Solve one interation for thread i 
+/* Solve one interation for thread i
  * Thread i - in charge of block i, row i, and col i
  *   Block layout:
  *     0 1 2
@@ -69,7 +69,7 @@ void solve_block(int i) {
 void loneranger_twins_triplets(int i) {
   int loneranger_tally[dim];
   int loneranger_indices[dim];
-  
+
   hashmap twins; // Map twins value -> index of first occurrence
 
   hashmap triplets; // Map triplets value -> index of first and second occurrence
@@ -80,7 +80,7 @@ void loneranger_twins_triplets(int i) {
       add all possible values in j to loneranger_tally[dim];
       change loneranger_indices[dim] to j for all updated values;
 
-    
+
       /* Twins */
       if j has exactly two possible values:
         if value at j is in hashmap twins

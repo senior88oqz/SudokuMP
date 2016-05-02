@@ -26,18 +26,18 @@ void index_to_row_col(int i, int j, Align align, int &row, int &col) {
 
 /* Remove all instances of value from row/col/block i */
 void clear_number(int i, Align align, int value) {
-  int mask = ~ (1 << (value-1));
+  int index = value-1;
   if(align == ROW) {
     for(int c = 0; c < board->dim; c++)
-      board->cells[i][c] = mask & board->cells[i][c];
+      board->cells[i][c][index] = 0;
   } else if (align == COL) {
     for(int r = 0; r < board->dim; r++)
-      board->cells[r][i] = mask & board->cells[r][i];
+      board->cells[r][i][index] = 0;
   } else {
     int id = board->inner_dim;
     for(int r = (i/id) * id; r < (i/id)*id + id; r++) {
       for(int c = (i%id) * id; c < (i%id)*id + id; c++) {
-        board->cells[r][c] = mask & board->cells[r][c];
+        board->cells[r][c][index] = 0;
       }
     }
   }
@@ -60,33 +60,36 @@ void update_solution(int row, int col, int num) {
  * If possible, update solution and remove num from row, col, and block
  */
 bool elimination(int i, int j, Align align) {
-  int row, col, value, num = 1;
+  int row, col, value_found;
+  bool found = 0;
   index_to_row_col(i, j, align, row, col);
 
   if (!board->solution[row][col]) {
-    value = board->cells[row][col];
-    if(value == 0) {
+    for(int value = 0; value < board->dim; value++) {
+      if(board->cells[row][col][value]) {
+        if(found) {
+          return 0;
+        }
+        found = 1;
+        value_found = value;
+      }
+    }
+
+    if(!found) {
       std::cerr << "No values left\n";
+      return 0;
     }
-    while(value % 2 == 0) {
-      value = value/2;
-      num++;
-    }
-    if(value == 1) {
-      int id = board->inner_dim;
-      update_solution(row, col, num);
-      return 1;
-    }
+    update_solution(row, col, value_found+1);
+    return 1;
   }
   return 0;
-
 }
 
 /* Solve row/col/block i using lone ranger
  * Return true if something changed
  */
 bool loneranger(int i, Align align) {
-  int mask, value, row, col, ret = 0;
+  int row, col, ret = 0;
 
   // Data structure for lone rangers
   int num_found[board->dim], row_found[board->dim], col_found[board->dim];
@@ -97,14 +100,12 @@ bool loneranger(int i, Align align) {
   for(int j = 0; j < board->dim; j++) {
     index_to_row_col(i, j, align, row, col);
     if(!board->solution[row][col]) {
-      mask = 1;
       for(int num = 0; num < board->dim; num++) {
-        if(board->cells[row][col] & mask) {
+        if(board->cells[row][col][num]) {
           num_found[num]++;
           row_found[num] = row;
           col_found[num] = col;
         }
-        mask *= 2;
       }
     }
   }
@@ -117,6 +118,97 @@ bool loneranger(int i, Align align) {
   return ret;
 }
 
+bool twins(int i, Align align) {
+  int ret = 0, row, col, row_found[2], col_found[2], num_found;
+
+  for(int num1 = 0; num1 < board->dim; num1++) {
+    for(int num2 = num1+1; num2 < board->dim; num2++) {
+      num_found = 0;
+      for(int j = 0; j < board->dim; j++) {
+        index_to_row_col(i, j, align, row, col);
+        if(!board->solution[row][col]) {
+          if(board->cells[row][col][num1] && board->cells[row][col][num2]) {
+            num_found++;
+            if(num_found > 2) break;
+            row_found[num_found-1] = row;
+            col_found[num_found-1] = col;
+          } else if(board->cells[row][col][num1] || board->cells[row][col][num2]) {
+            num_found = 0;
+            break;
+          }
+        }
+      }
+      if(num_found == 2) {
+        for(int num = 0; num < board->dim; num++) {
+          if(num != num1 && num != num2) {
+            if(board->cells[row_found[0]][col_found[0]][num]) {
+              board->cells[row_found[0]][col_found[0]][num] = 0;
+              ret = 1;
+            }
+            if(board->cells[row_found[1]][col_found[1]][num]) {
+              board->cells[row_found[1]][col_found[1]][num] = 0;
+              ret = 1;
+            }
+          }
+        }
+      }
+    }
+  }
+  if(ret)
+    std::cout << "FOUND TWIN\n";
+  return ret;
+}
+
+bool triplets(int i, Align align) {
+  int ret = 0, row, col, row_found[3], col_found[3], num_found;
+
+  for(int num1 = 0; num1 < board->dim; num1++) {
+    for(int num2 = num1+1; num2 < board->dim; num2++) {
+      for(int num3 = num2+1; num3 < board->dim; num3++) {
+        num_found = 0;
+        for(int j = 0; j < board->dim; j++) {
+          index_to_row_col(i, j, align, row, col);
+          if(!board->solution[row][col]) {
+            if(board->cells[row][col][num1] && board->cells[row][col][num2]
+                && board->cells[row][col][num3]) {
+              num_found++;
+              if(num_found > 3) break;
+              row_found[num_found-1] = row;
+              col_found[num_found-1] = col;
+            } else if(board->cells[row][col][num1] ||
+                      board->cells[row][col][num2] ||
+                      board->cells[row][col][num3]) {
+              num_found = 0;
+              break;
+            }
+          }
+        }
+        if(num_found == 3) {
+          for(int num = 0; num < board->dim; num++) {
+            if(num != num1 && num != num2 && num != num3) {
+              if(board->cells[row_found[0]][col_found[0]][num]) {
+                board->cells[row_found[0]][col_found[0]][num] = 0;
+                ret = 1;
+              }
+              if(board->cells[row_found[1]][col_found[1]][num]) {
+                board->cells[row_found[1]][col_found[1]][num] = 0;
+                ret = 1;
+              }
+              if(board->cells[row_found[2]][col_found[2]][num]) {
+                board->cells[row_found[2]][col_found[2]][num] = 0;
+                ret = 1;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  if(ret)
+    std::cout << "FOUND TRIPLET\n";
+  return ret;
+}
+
 /********************************************************************/
 
 
@@ -124,8 +216,8 @@ void print_cells() {
   std::ostringstream stm;
   for(int r = 0; r < board->dim; r++) {
     for(int c = 0; c < board->dim; c++) {
-      for(int shift = (int)pow(2.0, (board->dim-1)); shift > 0; shift >>= 1) {
-        stm << ((board->cells[r][c] & shift) == shift) ? 1 : 0;
+      for(int num = 0; num < board->dim; num++) {
+        stm << board->cells[r][c][num];
       }
       stm << " ";
       if((c+1) % board->inner_dim == 0)
@@ -184,16 +276,14 @@ bool create_board(const char* filename, int dim) {
 
   board = new Board(dim);
 
-  int num, bits;
+  int num;
   for(int row = 0; row < dim; row++) {
     for(int col = 0; col < dim; col++) {
       fscanf(file, "%d", &num);
-      if(num == 0)
-        bits = (1 << dim) - 1;
-      else
-        bits = 1 << (num-1);
       board->solution[row][col] = num;
-      board->cells[row][col] = bits;
+      for(int index = 0; index < board->dim; index++) {
+        board->cells[row][col][index] = 1;
+      }
     }
   }
 
@@ -225,6 +315,22 @@ void solve() {
         changed |= loneranger(thread_id, ROW);
         changed |= loneranger(thread_id, COL);
         changed |= loneranger(thread_id, BLOCK);
+      }
+    }
+
+    if(!changed) {
+      for(int thread_id = 0; thread_id < board->dim; thread_id++) {
+        changed |= twins(thread_id, ROW);
+        changed |= twins(thread_id, COL);
+        changed |= twins(thread_id, BLOCK);
+      }
+    }
+
+    if(!changed) {
+      for(int thread_id = 0; thread_id < board->dim; thread_id++) {
+        changed |= triplets(thread_id, ROW);
+        changed |= triplets(thread_id, COL);
+        changed |= triplets(thread_id, BLOCK);
       }
     }
 
@@ -296,7 +402,7 @@ int main(int argc, const char* argv[]){
     print_cells();
     solve();
 
-    std::cout<< "SOLVED BOARD: \n";
+    std::cout<< "\nSOLVED BOARD: \n";
 		print_board();
 
 		//clock_t t = clock();
