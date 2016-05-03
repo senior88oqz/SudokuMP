@@ -8,6 +8,8 @@
 
 enum Align {ROW, COL, BLOCK};
 
+Board* board;
+
 /************ Helper functions **************************************/
 
 /* Turn i, j, align into row, col */
@@ -377,7 +379,7 @@ bool brute_force(int** input, int dim, int inner_dim, int row, int col){
 }
 
 int main(int argc, const char* argv[]){
-	if (argc == 3){
+  if (argc == 3){
 		int path_max;
 
 		#ifdef PATH_MAX

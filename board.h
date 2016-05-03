@@ -40,7 +40,7 @@ struct Board
 };
 
 /* Global board struct */
-Board* board;
+extern Board* board;
 
 /* Prints the cells of possible values */
 void print_cells();
@@ -53,8 +53,4 @@ bool create_board(char* filename, int dim);
 
 /* Solve the sudoku board */
 void solve();
-
-bool check_move(int **input, int dim, int inner_dim, int row, int col, int num);
-
-bool brute_force(int** input, int dim, int inner_dim, int row, int col);
 
