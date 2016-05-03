@@ -16,6 +16,10 @@ struct State
     copy_board->cells_solved = board->cells_solved;
   }
 
+  ~State() {
+    delete copy_board;
+  }
+
   // copy_board = a copy of the state of the board before guessing
   Board* copy_board;
 

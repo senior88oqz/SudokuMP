@@ -30,7 +30,6 @@ void make_guess() {
   int row, col, guess;
 
   choose_cell(row, col, guess);
-  std::cout << "Chose " << row << " " << col << " " << guess << "\n";
   State* new_state = new State();
   new_state->row = row;
   new_state->col = col;
@@ -41,7 +40,6 @@ void make_guess() {
 }
 
 void backtrack() {
-  std::cout << "Start backtrack\n";
   State* old_state = states.top();
   int new_guess = 0;
   int row = old_state->row, col = old_state->col, guess = old_state->guess;
@@ -56,6 +54,7 @@ void backtrack() {
 
   // No values left to guess, so backtrack once more
   if(!new_guess) {
+    delete old_state;
     states.pop();
     backtrack();
     return;

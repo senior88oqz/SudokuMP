@@ -69,7 +69,6 @@ bool elimination(int i, int j, Align align) {
     if(!found) {
       std::cout << "WRONG GUESS\n";
       backtrack();
-      std::cout << "Finish backtrack\n";
       return 1;
     }
     update_solution(row, col, value_found+1);

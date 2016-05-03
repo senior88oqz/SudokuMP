@@ -24,6 +24,18 @@ struct Board
     }
   }
 
+  ~Board() {
+    for(int r = 0; r < dim; r++) {
+      for(int c = 0; c < dim; c++) {
+        delete cells[r][c];
+      }
+      delete cells[r];
+      delete solution[r];
+    }
+    delete cells;
+    delete solution;
+  }
+
   int dim;
 
   int inner_dim;
