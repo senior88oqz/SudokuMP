@@ -1,4 +1,4 @@
-#include "board.h"
+#include "brute_force.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -9,6 +9,7 @@
 enum Align {ROW, COL, BLOCK};
 
 Board* board;
+std::stack<State*> states;
 
 /************ Helper functions **************************************/
 
@@ -45,18 +46,6 @@ void clear_number(int i, Align align, int value) {
   }
 }
 
-/* Update board->solution[row][col] with value
- * Clear value from all neighboring cells
- */
-void update_solution(int row, int col, int num) {
-  int id = board->inner_dim;
-  board->solution[row][col] = num;
-  board->cells_solved++;
-  clear_number(row, ROW, num);
-  clear_number(col, COL, num);
-  clear_number((row/id)*id + (col/id), BLOCK, num);
-}
-
 
 /* Test is elimination is possible (i.e. 010000000 -> 8)
  * If possible, update solution and remove num from row, col, and block
@@ -78,8 +67,10 @@ bool elimination(int i, int j, Align align) {
     }
 
     if(!found) {
-      std::cerr << "No values left\n";
-      return 0;
+      std::cout << "WRONG GUESS\n";
+      backtrack();
+      std::cout << "Finish backtrack\n";
+      return 1;
     }
     update_solution(row, col, value_found+1);
     return 1;
@@ -312,6 +303,15 @@ bool create_board(const char* filename, int dim) {
   return 1;
 }
 
+void update_solution(int row, int col, int num) {
+  int id = board->inner_dim;
+  board->solution[row][col] = num;
+  board->cells_solved++;
+  clear_number(row, ROW, num);
+  clear_number(col, COL, num);
+  clear_number((row/id)*id + (col/id), BLOCK, num);
+}
+
 void solve() {
   bool changed = 0;
   int total = board->dim * board->dim;
@@ -348,8 +348,8 @@ void solve() {
     }
 
     if(!changed) {
-      //Brute force needed
-      return;
+      std::cout << "GUESSED\n";
+      make_guess();
     }
   }
 }

@@ -51,6 +51,9 @@ void print_board();
 /* Creates a board with initialized values, store in global variable */
 bool create_board(char* filename, int dim);
 
+/* Updates board->solutions and clears neighboring cells of num */
+void update_solution(int row, int col, int num);
+
 /* Solve the sudoku board */
 void solve();
 
