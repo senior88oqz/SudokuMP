@@ -1,4 +1,4 @@
-#include "brute_force.h"
+#include "make_guess.h"
 #include "CycleTimer.h"
 #include <stdio.h>
 #include <stdlib.h>
