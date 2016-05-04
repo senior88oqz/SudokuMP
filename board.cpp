@@ -15,9 +15,37 @@ Board* board;
 std::stack<State*> states;
 
 // Lock when changing solution
-omp_lock_t lock;
+omp_lock_t read_lock;
+omp_lock_t write_lock;
+int readers = 0;
+
 
 /************ Helper functions **************************************/
+
+/* R/W lock functions */
+void reader_lock() {
+  omp_set_lock(&read_lock);
+  readers++;
+  if(readers == 1) omp_set_lock(&write_lock);
+  omp_unset_lock(&read_lock);
+}
+
+void reader_unlock() {
+  omp_set_lock(&read_lock);
+  readers--;
+  if(readers == 0) omp_unset_lock(&write_lock);
+  omp_unset_lock(&read_lock);
+}
+
+void writer_lock() {
+  omp_set_lock(&write_lock);
+}
+
+void writer_unlock() {
+  omp_unset_lock(&write_lock);
+}
+
+
 
 /* Turn i, j, align into row, col */
 void index_to_row_col(int i, int j, Align align, int &row, int &col) {
@@ -94,7 +122,7 @@ bool loneranger(int i, Align align) {
 
   for(int num = 0; num < board->dim; num++) {
     num_found = 0;
-    omp_set_lock(&lock);
+    reader_lock();
     for(int j = 0; j < board->dim; j++) {
       index_to_row_col(i, j, align, row, col);
       if(!board->solution[row][col] && board->cells[row][col][num]) {
@@ -104,7 +132,7 @@ bool loneranger(int i, Align align) {
         col_found = col;
       }
     }
-    omp_unset_lock(&lock);
+    reader_unlock();
     if(num_found == 1) {
       ret = 1;
       update_solution(row_found, col_found, num+1);
@@ -271,6 +299,7 @@ bool create_board(const char* filename, int dim) {
     for(int col = 0; col < dim; col++) {
       if(board->solution[row][col]) {
         update_solution(row, col, board->solution[row][col]);
+        board->cells_solved++;
       }
     }
   }
@@ -278,13 +307,15 @@ bool create_board(const char* filename, int dim) {
 }
 
 void update_solution(int row, int col, int num) {
-  int id = board->inner_dim;
-  omp_set_lock(&lock);
-  #pragma omp atomic write
-  board->solution[row][col] = num;
-  omp_unset_lock(&lock);
-  #pragma omp atomic update
-  board->cells_solved++;
+  int id = board->inner_dim, success;
+  writer_lock();
+
+  success = __sync_bool_compare_and_swap(&board->solution[row][col], 0, num);
+  writer_unlock();
+  if(success) {
+    #pragma omp atomic update
+    board->cells_solved++;
+  }
   clear_number(row, ROW, num);
   clear_number(col, COL, num);
   clear_number((row/id)*id + (col/id), BLOCK, num);
