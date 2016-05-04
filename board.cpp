@@ -352,10 +352,11 @@ void solve() {
         changed |= loneranger(thread_id, BLOCK);
       }
     }
-    print_board();
-    print_cells();
+    //print_board();
+    //print_cells();
 
     if(!changed) {
+      std::cout << "Twins\n";
       #pragma omp parallel for
       for(int thread_id = 0; thread_id < board->dim; thread_id++) {
         #pragma omp atomic update
@@ -367,10 +368,11 @@ void solve() {
       }
     }
 
-    print_board();
-    print_cells();
+    //print_board();
+    //print_cells();
 
     if(!changed) {
+      std::cout << "Triplets\n";
       #pragma omp parallel for
       for(int thread_id = 0; thread_id < board->dim; thread_id++) {
         #pragma omp atomic update
@@ -383,6 +385,7 @@ void solve() {
     }
 
     if(!changed) {
+      std::cout << "GUESS\n";
       make_guess();
     }
   }
