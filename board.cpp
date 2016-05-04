@@ -1,4 +1,4 @@
-#include "brute_force.h"
+#include "make_guess.h"
 #include "CycleTimer.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -309,8 +309,6 @@ void solve() {
       changed = 1;
     }
 
-    print_board();
-    print_cells();
     if(!changed) {
       #pragma omp parallel for
       for(int thread_id = 0; thread_id < board->dim; thread_id++) {
@@ -326,17 +324,28 @@ void solve() {
     print_cells();
 
     if(!changed) {
+      #pragma omp parallel for
       for(int thread_id = 0; thread_id < board->dim; thread_id++) {
+        #pragma omp atomic update
         changed |= twins(thread_id, ROW);
+        #pragma omp atomic update
         changed |= twins(thread_id, COL);
+        #pragma omp atomic update
         changed |= twins(thread_id, BLOCK);
       }
     }
 
+    print_board();
+    print_cells();
+
     if(!changed) {
+      #pragma omp parallel for
       for(int thread_id = 0; thread_id < board->dim; thread_id++) {
+        #pragma omp atomic update
         changed |= triplets(thread_id, ROW);
+        #pragma omp atomic update
         changed |= triplets(thread_id, COL);
+        #pragma omp atomic update
         changed |= triplets(thread_id, BLOCK);
       }
     }

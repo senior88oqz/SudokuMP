@@ -1,4 +1,4 @@
-#include "brute_force.h"
+#include "make_guess.h"
 
 /* Choose cell with least possible values */
 void choose_cell(int &row, int &col, int &value) {
