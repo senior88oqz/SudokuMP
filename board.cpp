@@ -307,11 +307,12 @@ bool create_board(const char* filename, int dim) {
 }
 
 void update_solution(int row, int col, int num) {
+
   int id = board->inner_dim, success;
   writer_lock();
-
   success = __sync_bool_compare_and_swap(&board->solution[row][col], 0, num);
   writer_unlock();
+
   if(success) {
     #pragma omp atomic update
     board->cells_solved++;
