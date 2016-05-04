@@ -280,7 +280,7 @@ bool create_board(const char* filename, int dim) {
 void update_solution(int row, int col, int num) {
   int id = board->inner_dim;
   omp_set_lock(&lock);
-  #pragma omp atomic write
+  //#pragma omp atomic write
   board->solution[row][col] = num;
   omp_unset_lock(&lock);
   #pragma omp atomic update
