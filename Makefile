@@ -1,11 +1,14 @@
-sudoku: board.o brute_force.o
-	g++ -o sudoku brute_force.o board.o
+CXX = g++ -m64 -std=c++11
+CXXFLAGS = -Wall -fopenmp
 
-board.o: board.cpp board.h
-	g++ -c board.cpp
+sudoku: board.cpp board.h brute_force.cpp brute_force.h
+	$(CXX) $(CXXFLAGS) -o sudoku brute_force.cpp board.cpp
 
-brute_force.o: brute_force.cpp brute_force.h
-	g++ -c brute_force.cpp
 
-clean:
-	rm -f board.o brute_force.o
+
+
+
+
+
+
+

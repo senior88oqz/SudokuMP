@@ -1,10 +1,13 @@
 #include "brute_force.h"
+#include "CycleTimer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <omp.h>
+
 
 enum Align {ROW, COL, BLOCK};
 
@@ -32,14 +35,17 @@ void clear_number(int i, Align align, int value) {
   int index = value-1;
   if(align == ROW) {
     for(int c = 0; c < board->dim; c++)
+      #pragma omp atomic write
       board->cells[i][c][index] = 0;
   } else if (align == COL) {
     for(int r = 0; r < board->dim; r++)
+      #pragma omp atomic write
       board->cells[r][i][index] = 0;
   } else {
     int id = board->inner_dim;
     for(int r = (i/id) * id; r < (i/id)*id + id; r++) {
       for(int c = (i%id) * id; c < (i%id)*id + id; c++) {
+        #pragma omp atomic write
         board->cells[r][c][index] = 0;
       }
     }
@@ -50,7 +56,7 @@ void clear_number(int i, Align align, int value) {
 /* Test is elimination is possible (i.e. 010000000 -> 8)
  * If possible, update solution and remove num from row, col, and block
  */
-bool elimination(int i, int j, Align align) {
+bool elimination(int i, int j, Align align, bool &need_backtrack) {
   int row, col, value_found;
   bool found = 0;
   index_to_row_col(i, j, align, row, col);
@@ -67,8 +73,9 @@ bool elimination(int i, int j, Align align) {
     }
 
     if(!found) {
-      std::cout << "WRONG GUESS\n";
-      backtrack();
+      #pragma omp atomic write
+      need_backtrack = 1;
+      print_board();
       return 1;
     }
     update_solution(row, col, value_found+1);
@@ -146,8 +153,6 @@ bool twins(int i, Align align) {
       }
     }
   }
-  if(ret)
-    std::cout << "FOUND TWIN\n";
   return ret;
 }
 
@@ -206,9 +211,6 @@ bool triplets(int i, Align align) {
       }
     }
   }
-  if(ret) {
-    std::cout << "FOUND TRIPLET\n";
-  }
   return ret;
 }
 
@@ -250,29 +252,6 @@ void print_board(){
     std::cout << stm.str();
 }
 
-bool check_move(int **input, int dim, int inner_dim, int row, int col, int num){
-	for (int i = 0; i < dim; i++){
-		if (input[i][col] == num){
-			return 0;
-		}
-		else if (input[row][i] == num){
-			return 0;
-		}
-	}
-
-	int box_row = (row - (row % inner_dim));
-	int box_col = (col - (col % inner_dim));
-
-	for (int new_row = box_row; new_row < (box_row + inner_dim); new_row++){
-		for (int new_col = box_col; new_col < (box_col + inner_dim); new_col++){
-			if (input[new_row][new_col] == num){
-				return false;
-			}
-		}
-	}
-	return true;
-}
-
 bool create_board(const char* filename, int dim) {
   FILE *file = fopen(filename, "r");
   if(!file) return 0;
@@ -291,7 +270,6 @@ bool create_board(const char* filename, int dim) {
   }
 
   // Reset cells based on numbers given
-  int id = board->inner_dim;
   for(int row = 0; row < dim; row++) {
     for(int col = 0; col < dim; col++) {
       if(board->solution[row][col]) {
@@ -304,7 +282,9 @@ bool create_board(const char* filename, int dim) {
 
 void update_solution(int row, int col, int num) {
   int id = board->inner_dim;
+  #pragma omp atomic write
   board->solution[row][col] = num;
+  #pragma omp atomic update
   board->cells_solved++;
   clear_number(row, ROW, num);
   clear_number(col, COL, num);
@@ -312,17 +292,26 @@ void update_solution(int row, int col, int num) {
 }
 
 void solve() {
-  bool changed = 0;
+  bool changed, need_backtrack;
   int total = board->dim * board->dim;
+  omp_set_num_threads(board->dim);
   while(board->cells_solved < total) {
     changed = 0;
+    need_backtrack = 0;
+    #pragma omp parallel for
     for(int thread_id = 0; thread_id < board->dim; thread_id++) {
       for(int j = 0; j < board->dim; j++) {
-       changed |= elimination(thread_id, j, BLOCK);
+        #pragma omp atomic update
+        changed |= elimination(thread_id, j, BLOCK, need_backtrack);
       }
+    }
+    if(need_backtrack) {
+      backtrack();
+      changed = 1;
     }
 
     if(!changed) {
+      //#pragma omp parallel for
       for(int thread_id = 0; thread_id < board->dim; thread_id++) {
         changed |= loneranger(thread_id, ROW);
         changed |= loneranger(thread_id, COL);
@@ -347,34 +336,9 @@ void solve() {
     }
 
     if(!changed) {
-      std::cout << "GUESSED\n";
       make_guess();
     }
   }
-}
-
-bool brute_force(int** input, int dim, int inner_dim, int row, int col){
-	//std::cout<<col;
-	if (col >= dim){
-		row++;
-		col = 0;
-		if (row >= dim){
-			return true;
-		}
-	}
-	if (input[row][col] != 0){
-		return brute_force(input, dim, inner_dim, row, col+1);
-	}
-  for (int num = 1; num <= dim; num++){
-		if (check_move(input, dim, inner_dim, row, col, num)){
-		  input[row][col] = num;
-		  if (brute_force(input, dim, inner_dim, row, col+1)){
-				return true;
-		  }
-		}
-  }
-	input[row][col] = 0;
-	return false;
 }
 
 int main(int argc, const char* argv[]){
@@ -411,24 +375,15 @@ int main(int argc, const char* argv[]){
     }
 
     print_board();
-    print_cells();
+    //print_cells();
+
+    double start = CycleTimer::currentSeconds();
     solve();
+    double time = CycleTimer::currentSeconds() - start;
 
     std::cout<< "\nSOLVED BOARD: \n";
 		print_board();
-
-		//clock_t t = clock();
-		//if (brute_force(input, Board.dim, Board.inner_dim, 0, 0)){
-			//print_board(input, Board.dim, Board.inner_dim);
-		//}
-		//else{
-			//std::cout << "Error: Sudoku board is unsolvable";
-		//}
-		//t = clock()-t;
-		//std::cout << "\n\n";
-		//std::cout << "Runtime: ";
-		//std::cout << ((float)t)/CLOCKS_PER_SEC;
-		//std::cout << " seconds\n";
+    std::cout << "Time elapsed: " << time << " secs\n";
 	}
 	else {
 		std::cerr << "Error: No text file path for puzzle included.";

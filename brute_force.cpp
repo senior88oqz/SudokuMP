@@ -40,6 +40,10 @@ void make_guess() {
 }
 
 void backtrack() {
+  if(states.empty()) {
+    std::cerr << "ERROR: Stack is empty\n";
+    return;
+  }
   State* old_state = states.top();
   int new_guess = 0;
   int row = old_state->row, col = old_state->col, guess = old_state->guess;
