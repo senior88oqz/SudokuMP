@@ -14,6 +14,9 @@ enum Align {ROW, COL, BLOCK};
 Board* board;
 std::stack<State*> states;
 
+// Lock when changing solution
+omp_lock_t lock;
+
 /************ Helper functions **************************************/
 
 /* Turn i, j, align into row, col */
@@ -72,10 +75,9 @@ bool elimination(int i, int j, Align align, bool &need_backtrack) {
       }
     }
 
-    if(!found) {
+    if(!found && !board->solution[row][col]) {
       #pragma omp atomic write
       need_backtrack = 1;
-      print_board();
       return 1;
     }
     update_solution(row, col, value_found+1);
@@ -88,32 +90,27 @@ bool elimination(int i, int j, Align align, bool &need_backtrack) {
  * Return true if something changed
  */
 bool loneranger(int i, Align align) {
-  int row, col, ret = 0;
+  int row, col, ret = 0, row_found, col_found, num_found;
 
-  // Data structure for lone rangers
-  int num_found[board->dim], row_found[board->dim], col_found[board->dim];
   for(int num = 0; num < board->dim; num++) {
-    num_found[num] = 0;
-  }
-
-  for(int j = 0; j < board->dim; j++) {
-    index_to_row_col(i, j, align, row, col);
-    if(!board->solution[row][col]) {
-      for(int num = 0; num < board->dim; num++) {
-        if(board->cells[row][col][num]) {
-          num_found[num]++;
-          row_found[num] = row;
-          col_found[num] = col;
-        }
+    num_found = 0;
+    omp_set_lock(&lock);
+    for(int j = 0; j < board->dim; j++) {
+      index_to_row_col(i, j, align, row, col);
+      if(!board->solution[row][col] && board->cells[row][col][num]) {
+        num_found++;
+        if(num_found > 1) break;
+        row_found = row;
+        col_found = col;
       }
     }
-  }
-  for(int num = 0; num < board->dim; num++) {
-    if(num_found[num] == 1) {
+    omp_unset_lock(&lock);
+    if(num_found == 1) {
       ret = 1;
-      update_solution(row_found[num], col_found[num], num+1);
+      update_solution(row_found, col_found, num+1);
     }
   }
+
   return ret;
 }
 
@@ -282,8 +279,10 @@ bool create_board(const char* filename, int dim) {
 
 void update_solution(int row, int col, int num) {
   int id = board->inner_dim;
+  omp_set_lock(&lock);
   #pragma omp atomic write
   board->solution[row][col] = num;
+  omp_unset_lock(&lock);
   #pragma omp atomic update
   board->cells_solved++;
   clear_number(row, ROW, num);
@@ -310,14 +309,21 @@ void solve() {
       changed = 1;
     }
 
+    print_board();
+    print_cells();
     if(!changed) {
-      //#pragma omp parallel for
+      #pragma omp parallel for
       for(int thread_id = 0; thread_id < board->dim; thread_id++) {
+        #pragma omp atomic update
         changed |= loneranger(thread_id, ROW);
+        #pragma omp atomic update
         changed |= loneranger(thread_id, COL);
+        #pragma omp atomic update
         changed |= loneranger(thread_id, BLOCK);
       }
     }
+    print_board();
+    print_cells();
 
     if(!changed) {
       for(int thread_id = 0; thread_id < board->dim; thread_id++) {
