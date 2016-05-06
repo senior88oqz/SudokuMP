@@ -439,6 +439,7 @@ int main(int argc, const char* argv[]) {
 
     double start = CycleTimer::currentSeconds();
     //solve();
+    //update_stack(board);
     parallel_brute_force(board, board->dim * board->dim);
     double time = CycleTimer::currentSeconds() - start;
 

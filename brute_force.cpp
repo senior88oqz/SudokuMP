@@ -6,12 +6,19 @@ Board* create_copy_board(Board* board){
 		for(int col = 0; col < board->dim; col++) {
 			copy_board->solution[row][col] = board->solution[row][col];
 			for(int index = 0; index < board->dim; index++) {
-				copy_board->cells[row][col][index] = board->cells[row][col][index];
+				copy_board->cells[row][col][index] = 1;
 			}
 		}
 	}
 
-	copy_board->cells_solved = board->cells_solved;
+	for(int row = 0; row < copy_board->dim; row++) {
+		for(int col = 0; col < copy_board->dim; col++) {
+			if(copy_board->solution[row][col]) {
+				update_solution_bf(copy_board, row, col, copy_board->solution[row][col]);
+				copy_board->cells_solved++;
+			}
+		}
+	}
 
 	return copy_board;
 }
@@ -81,12 +88,12 @@ void update_solution_bf(Board* board, int row, int col, int num) {
 void update_stack(Board* board){
 	int row, col, value, counter = 0;
 	choose_cell_bf(board, row, col, value);
-
+	
 	for (int num = 0; num < board->dim; num++){
 		Board* copy_board = create_copy_board(board);
+		//std::cout << copy_board->cells_solved << "\n";
 		if (copy_board->cells[row][col][num]){
-			counter++;
-			update_solution_bf(copy_board, row, col, counter);
+			update_solution_bf(copy_board, row, col, num+1);
 			boards.push(copy_board);
 		}
 	}
@@ -105,7 +112,7 @@ void parallel_brute_force(Board* bf_board, int total){
 		board = bf_board;
 		return;
 	}
-	//#pragma omp task firstprivate(board, total)
+	//#pragma omp task firstprivate(bf_board, total)
 	{
 		update_stack(bf_board);
 		if (boards.empty()){
@@ -117,6 +124,7 @@ void parallel_brute_force(Board* bf_board, int total){
 		
 		if (next_board != NULL){
 			boards.pop();
+			std::cout << next_board->cells_solved << "\n";
 			parallel_brute_force(next_board, total);
 		}
 	}
