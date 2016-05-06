@@ -124,7 +124,7 @@ void parallel_brute_force(Board* bf_board, int total){
 		
 		if (next_board != NULL){
 			boards.pop();
-			std::cout << next_board->cells_solved << "\n";
+			//std::cout << next_board->cells_solved << "\n";
 			parallel_brute_force(next_board, total);
 		}
 	}
