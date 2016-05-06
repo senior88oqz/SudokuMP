@@ -22,7 +22,9 @@ int readers = 0;
 
 /************ Helper functions **************************************/
 
-/* R/W lock functions */
+/* R/W lock functions
+ * The R/W locks are no longer needed because we discovered a work-around
+ */
 void reader_lock() {
   omp_set_lock(&read_lock);
   readers++;
@@ -122,7 +124,6 @@ bool loneranger(int i, Align align) {
 
   for(int num = 0; num < board->dim; num++) {
     num_found = 0;
-    reader_lock();
     for(int j = 0; j < board->dim; j++) {
       index_to_row_col(i, j, align, row, col);
       if(!board->solution[row][col] && board->cells[row][col][num]) {
@@ -132,7 +133,6 @@ bool loneranger(int i, Align align) {
         col_found = col;
       }
     }
-    reader_unlock();
     if(num_found == 1) {
       ret = 1;
       update_solution(row_found, col_found, num+1);
@@ -309,9 +309,7 @@ bool create_board(const char* filename, int dim) {
 void update_solution(int row, int col, int num) {
 
   int id = board->inner_dim, success;
-  writer_lock();
   success = __sync_bool_compare_and_swap(&board->solution[row][col], 0, num);
-  writer_unlock();
 
   if(success) {
     #pragma omp atomic update
@@ -325,11 +323,11 @@ void update_solution(int row, int col, int num) {
 void solve() {
   bool changed, need_backtrack;
   int total = board->dim * board->dim;
-  omp_set_num_threads(board->dim);
+  omp_set_num_threads(16);
   while(board->cells_solved < total) {
     changed = 0;
     need_backtrack = 0;
-    #pragma omp parallel for
+    #pragma omp parallel for collapse(2) schedule(static)
     for(int thread_id = 0; thread_id < board->dim; thread_id++) {
       for(int j = 0; j < board->dim; j++) {
         #pragma omp atomic update
@@ -342,22 +340,29 @@ void solve() {
     }
 
     if(!changed) {
-      #pragma omp parallel for
+      #pragma omp parallel for schedule(static)
       for(int thread_id = 0; thread_id < board->dim; thread_id++) {
         #pragma omp atomic update
         changed |= loneranger(thread_id, ROW);
+      }
+    }
+    if(!changed) {
+      #pragma omp parallel for schedule(static)
+      for(int thread_id = 0; thread_id < board->dim; thread_id++) {
         #pragma omp atomic update
         changed |= loneranger(thread_id, COL);
+      }
+    }
+    if(!changed) {
+      #pragma omp parallel for schedule(static)
+      for(int thread_id = 0; thread_id < board->dim; thread_id++) {
         #pragma omp atomic update
         changed |= loneranger(thread_id, BLOCK);
       }
     }
-    //print_board();
-    //print_cells();
 
     if(!changed) {
-      std::cout << "Twins\n";
-      #pragma omp parallel for
+      #pragma omp parallel for schedule(dynamic)
       for(int thread_id = 0; thread_id < board->dim; thread_id++) {
         #pragma omp atomic update
         changed |= twins(thread_id, ROW);
@@ -368,11 +373,7 @@ void solve() {
       }
     }
 
-    //print_board();
-    //print_cells();
-
     if(!changed) {
-      std::cout << "Triplets\n";
       #pragma omp parallel for
       for(int thread_id = 0; thread_id < board->dim; thread_id++) {
         #pragma omp atomic update
@@ -385,13 +386,13 @@ void solve() {
     }
 
     if(!changed) {
-      std::cout << "GUESS\n";
       make_guess();
     }
   }
 }
 
-int main(int argc, const char* argv[]){
+
+int read_input(int argc, const char* argv[]) {
   if (argc == 3){
 		int path_max;
 
@@ -424,6 +425,15 @@ int main(int argc, const char* argv[]){
       return 0;
     }
 
+    return 1;
+  } else {
+    std::cerr << "Error: No text file path for puzzle included.\n";
+    return 0;
+  }
+}
+
+int main(int argc, const char* argv[]) {
+  if(read_input(argc, argv)) {
     print_board();
     //print_cells();
 
@@ -434,9 +444,8 @@ int main(int argc, const char* argv[]){
     std::cout<< "\nSOLVED BOARD: \n";
 		print_board();
     std::cout << "Time elapsed: " << time << " secs\n";
-	}
-	else {
-		std::cerr << "Error: No text file path for puzzle included.";
-		return 0;
-	}
+    return 1;
+  } else {
+    return 0;
+  }
 }

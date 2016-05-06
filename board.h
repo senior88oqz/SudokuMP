@@ -66,6 +66,11 @@ bool create_board(char* filename, int dim);
 /* Updates board->solutions and clears neighboring cells of num */
 void update_solution(int row, int col, int num);
 
-/* Solve the sudoku board */
+/* Solve the sudoku board using the humanistic method */
 void solve();
 
+/* Read the input and create the global board
+ * Input should be of the form: ./sudoku path/to/file.txt dim
+ * Returns 1 if success
+ */
+int read_input(int argc, const char* argv[]);
