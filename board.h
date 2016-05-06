@@ -6,6 +6,8 @@
 #include <iostream>
 #include <time.h>
 
+enum Align {ROW, COL, BLOCK};
+
 struct Board
 {
   Board(int d = 9) {
@@ -53,6 +55,8 @@ struct Board
 
 /* Global board struct */
 extern Board* board;
+
+void clear_number(int i, Align align, int value);
 
 /* Prints the cells of possible values */
 void print_cells();

@@ -1,4 +1,4 @@
-#include "make_guess.h"
+#include "brute_force.h"
 #include "CycleTimer.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,16 +9,16 @@
 #include <omp.h>
 
 
-enum Align {ROW, COL, BLOCK};
-
 Board* board;
 std::stack<State*> states;
+std::stack<Board*> boards;
 
 // Lock when changing solution
 omp_lock_t read_lock;
 omp_lock_t write_lock;
 int readers = 0;
 
+#define NUM_THREADS 16
 
 /************ Helper functions **************************************/
 
@@ -323,7 +323,7 @@ void update_solution(int row, int col, int num) {
 void solve() {
   bool changed, need_backtrack;
   int total = board->dim * board->dim;
-  omp_set_num_threads(16);
+  omp_set_num_threads(NUM_THREADS);
   while(board->cells_solved < total) {
     changed = 0;
     need_backtrack = 0;
@@ -438,7 +438,8 @@ int main(int argc, const char* argv[]) {
     //print_cells();
 
     double start = CycleTimer::currentSeconds();
-    solve();
+    //solve();
+    parallel_brute_force(board, board->dim * board->dim);
     double time = CycleTimer::currentSeconds() - start;
 
     std::cout<< "\nSOLVED BOARD: \n";
