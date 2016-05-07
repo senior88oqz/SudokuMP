@@ -18,7 +18,7 @@ omp_lock_t read_lock;
 omp_lock_t write_lock;
 int readers = 0;
 
-#define NUM_THREADS 16
+#define NUM_THREADS 1
 #define BRUTE_FORCE
 
 /************ Helper functions **************************************/
@@ -329,7 +329,6 @@ void update_solution(int row, int col, int num) {
 void solve() {
   bool changed, need_backtrack;
   int total = board->dim * board->dim;
-  omp_set_num_threads(NUM_THREADS);
   while(board->cells_solved < total) {
     changed = 0;
     need_backtrack = 0;
@@ -442,10 +441,10 @@ int main(int argc, const char* argv[]) {
   if(read_input(argc, argv)) {
     print_board(board);
     //print_cells();
-
+    omp_set_num_threads(NUM_THREADS);
     double start = CycleTimer::currentSeconds();
     #ifdef BRUTE_FORCE
-      parallel_brute_force(board, board->dim * board->dim);
+      parallel_brute_force();
     #else
       solve();
     #endif

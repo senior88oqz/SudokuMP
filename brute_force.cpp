@@ -1,22 +1,22 @@
 #include "brute_force.h"
 #include <omp.h>
 
-Board* create_copy_board(Board* board){
-	Board* copy_board = new Board(board->dim);
-	for(int row = 0; row < board->dim; row++) {
-		for(int col = 0; col < board->dim; col++) {
-			copy_board->solution[row][col] = board->solution[row][col];
-			for(int index = 0; index < board->dim; index++) {
-				copy_board->cells[row][col][index] = board->cells[row][col][index];
+Board* create_copy_board(Board* b){
+  Board* copy_board = new Board(b->dim);
+	for(int row = 0; row < b->dim; row++) {
+		for(int col = 0; col < b->dim; col++) {
+			copy_board->solution[row][col] = b->solution[row][col];
+			for(int index = 0; index < b->dim; index++) {
+				copy_board->cells[row][col][index] = b->cells[row][col][index];
 			}
 		}
 	}
-  copy_board->cells_solved = board->cells_solved;
-
+  copy_board->cells_solved = b->cells_solved;
 	return copy_board;
 }
 
-void choose_cell_bf(Board* board, int &row, int &col) {
+/* Returns false if it found a cell with no remaining values */
+bool choose_cell_bf(Board* board, int &row, int &col) {
   int least = board->dim+1, counter;
   for(int r = 0; r < board->dim; r++) {
     for(int c = 0; c < board->dim; c++) {
@@ -28,13 +28,14 @@ void choose_cell_bf(Board* board, int &row, int &col) {
           }
         }
         if(counter < least) {
+          least = counter;
           row = r;
           col = c;
-          if(counter == 1) return;
         }
       }
     }
   }
+  return (counter != 0);
 }
 
 void clear_number_bf(Board* board, int i, Align align, int value) {
@@ -45,14 +46,14 @@ void clear_number_bf(Board* board, int i, Align align, int value) {
       #pragma omp atomic write
       board->cells[i][c][index] = 0;
     }
-      
+
   } else if (align == COL) {
     for(int r = 0; r < board->dim; r++)
     {
       #pragma omp atomic write
       board->cells[r][i][index] = 0;
     }
-      
+
   } else {
     int id = board->inner_dim;
     for(int r = (i/id) * id; r < (i/id)*id + id; r++) {
@@ -65,73 +66,68 @@ void clear_number_bf(Board* board, int i, Align align, int value) {
 }
 
 void update_solution_bf(Board* board, int row, int col, int num) {
-
   int id = board->inner_dim;
   int success = __sync_bool_compare_and_swap(&board->solution[row][col], 0, num);
   if(success) {
     #pragma omp atomic update
     board->cells_solved++;
+    clear_number_bf(board, row, ROW, num);
+    clear_number_bf(board, col, COL, num);
+    clear_number_bf(board, (row/id)*id + (col/id), BLOCK, num);
   }
-
-  clear_number_bf(board, row, ROW, num);
-  clear_number_bf(board, col, COL, num);
-  clear_number_bf(board, (row/id)*id + (col/id), BLOCK, num);
 }
 
 /* Get next empty cell on board, create copy
  * of board for each valid value for that cell,
  * then push copy of board to stack
  */
-void update_stack(Board* board){
+void update_stack(Board* b){
 	int row, col;
-	choose_cell_bf(board, row, col);
+  Board* copy_board;
 
-	for (int num = 0; num < board->dim; num++){
-		Board* copy_board = create_copy_board(board);
-		//std::cout << copy_board->cells_solved << "\n";
-		if (copy_board->cells[row][col][num]){
-			update_solution_bf(copy_board, row, col, num+1);
-			boards.push(copy_board);
-		}
-	}
+  if(choose_cell_bf(b, row, col)) {
+    for (int num = 0; num < b->dim; num++){
+		  //std::cout << copy_board->cells_solved << "\n";
+      if (b->cells[row][col][num]){
+        copy_board = create_copy_board(b);
+			  update_solution_bf(copy_board, row, col, num+1);
+        #pragma omp critical
+        {
+          boards.push(copy_board);
+        }
+		  }
+	  }
+  }
 }
 
+void parallel_brute_force() {
+  Board* curr_board;
+  int total = board->dim * board->dim;
+  boards.push(board);
 
-void parallel_brute_force(Board* bf_board, int total){
-	// Create copy of current board
-	// Find valid values for first empty cell
-	// Create separate boards for each value in that cell
-	// Push all of those copies onto boards stack
-	// Threads will pop from stack in parallel
-	// Repeat copy through pop
-
-  Board *next_board = NULL;
-	if (bf_board->cells_solved == total){
-
-    board = bf_board;
-    
-    //print_board(board);
-    std::cout << "SOLVED\n";
-		return;
-	}
-
-  #pragma omp parallel firstprivate(bf_board, total)
+  #pragma omp parallel
   {
-    
-    update_stack(bf_board);
-    if (boards.empty()){
-    }
-    else{
+    while(1) {
+      curr_board = NULL;
       #pragma omp critical
-      next_board = boards.top();
-    }
-
-    if (next_board != NULL){
-      #pragma omp critical
-      boards.pop();
-      parallel_brute_force(next_board, total);
+      {
+        if(!boards.empty()) {
+          curr_board = boards.top();
+          boards.pop();
+        }
+      }
+      if(curr_board) {
+        if(curr_board->cells_solved < total) {
+          update_stack(curr_board);
+        } else {
+          std::cout << "BRUTE FORCE SOLVED\n";
+          board = curr_board;
+          break;
+        }
+      } else {
+        std::cerr << "ERROR: Brute force stack is empty\n";
+        break;
+      }
     }
   }
-
-
 }
