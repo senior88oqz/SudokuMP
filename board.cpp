@@ -260,20 +260,20 @@ void print_cells() {
   std::cout << stm.str();
 }
 
-void print_board(){
+void print_board(Board* b){
     std::ostringstream stm;
-    for(int r = 0; r < board->dim; r++) {
-      for(int c = 0; c < board->dim; c++) {
-        stm << board->solution[r][c];
+    for(int r = 0; r < b->dim; r++) {
+      for(int c = 0; c < b->dim; c++) {
+        stm << b->solution[r][c];
         stm << " ";
-        if((c+1) % board->inner_dim == 0)
+        if((c+1) % b->inner_dim == 0)
           stm << " ";
       }
       stm << "\n";
-      if((r+1) % board->inner_dim == 0)
+      if((r+1) % b->inner_dim == 0)
         stm << "\n";
     }
-    stm << "CELLS SOLVED: " << board->cells_solved << "\n";
+    stm << "CELLS SOLVED: " << b->cells_solved << "\n";
     std::cout << stm.str();
 }
 
@@ -434,7 +434,7 @@ int read_input(int argc, const char* argv[]) {
 
 int main(int argc, const char* argv[]) {
   if(read_input(argc, argv)) {
-    print_board();
+    print_board(board);
     //print_cells();
 
     double start = CycleTimer::currentSeconds();
@@ -444,7 +444,7 @@ int main(int argc, const char* argv[]) {
     double time = CycleTimer::currentSeconds() - start;
 
     std::cout<< "\nSOLVED BOARD: \n";
-		print_board();
+		print_board(board);
     std::cout << "Time elapsed: " << time << " secs\n";
     return 1;
   } else {

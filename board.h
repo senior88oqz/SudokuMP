@@ -62,7 +62,7 @@ void clear_number(int i, Align align, int value);
 void print_cells();
 
 /* Prints the solution board */
-void print_board();
+void print_board(Board* b);
 
 /* Creates a board with initialized values, store in global variable */
 bool create_board(char* filename, int dim);
