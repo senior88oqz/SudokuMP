@@ -19,6 +19,7 @@ omp_lock_t write_lock;
 int readers = 0;
 
 #define NUM_THREADS 16
+#define BRUTE_FORCE
 
 /************ Helper functions **************************************/
 
@@ -264,7 +265,12 @@ void print_board(Board* b){
     std::ostringstream stm;
     for(int r = 0; r < b->dim; r++) {
       for(int c = 0; c < b->dim; c++) {
-        stm << b->solution[r][c];
+        if (b->solution[r][c] < 10 && b->dim > 9 ){
+          stm << "0" << b->solution[r][c];
+        }
+        else{
+          stm << b->solution[r][c];
+        }
         stm << " ";
         if((c+1) % b->inner_dim == 0)
           stm << " ";
@@ -438,9 +444,11 @@ int main(int argc, const char* argv[]) {
     //print_cells();
 
     double start = CycleTimer::currentSeconds();
-    //solve();
-    //update_stack(board);
-    parallel_brute_force(board, board->dim * board->dim);
+    #ifdef BRUTE_FORCE
+      parallel_brute_force(board, board->dim * board->dim);
+    #else
+      solve();
+    #endif
     double time = CycleTimer::currentSeconds() - start;
 
     std::cout<< "\nSOLVED BOARD: \n";
