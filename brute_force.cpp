@@ -1,8 +1,6 @@
 #include "brute_force.h"
 #include <omp.h>
 
-//#define PARALLEL
-
 Board* create_copy_board(Board* board){
 	Board* copy_board = new Board(board->dim);
 	for(int row = 0; row < board->dim; row++) {
@@ -44,18 +42,14 @@ void clear_number_bf(Board* board, int i, Align align, int value) {
   if(align == ROW) {
     for(int c = 0; c < board->dim; c++)
     {
-      #ifdef PARALLEL
-        #pragma omp atomic write
-      #endif
+      #pragma omp atomic write
       board->cells[i][c][index] = 0;
     }
       
   } else if (align == COL) {
     for(int r = 0; r < board->dim; r++)
     {
-      #ifdef PARALLEL
-        #pragma omp atomic write
-      #endif
+      #pragma omp atomic write
       board->cells[r][i][index] = 0;
     }
       
@@ -63,9 +57,7 @@ void clear_number_bf(Board* board, int i, Align align, int value) {
     int id = board->inner_dim;
     for(int r = (i/id) * id; r < (i/id)*id + id; r++) {
       for(int c = (i%id) * id; c < (i%id)*id + id; c++) {
-        #ifdef PARALLEL
-          #pragma omp atomic write
-        #endif
+        #pragma omp atomic write
         board->cells[r][c][index] = 0;
       }
     }
@@ -75,21 +67,12 @@ void clear_number_bf(Board* board, int i, Align align, int value) {
 void update_solution_bf(Board* board, int row, int col, int num) {
 
   int id = board->inner_dim;
-  #ifdef PARALLEL
-    int success = __sync_bool_compare_and_swap(&board->solution[row][col], 0, num);
-    if(success) {
-      #pragma omp atomic update
-      board->cells_solved++;
-    }
-  #else
-    if (board->solution[row][col] == 0){
-      board->solution[row][col] = num;
-      board->cells_solved++;
-    }
-  #endif
+  int success = __sync_bool_compare_and_swap(&board->solution[row][col], 0, num);
+  if(success) {
+    #pragma omp atomic update
+    board->cells_solved++;
+  }
 
-
-  
   clear_number_bf(board, row, ROW, num);
   clear_number_bf(board, col, COL, num);
   clear_number_bf(board, (row/id)*id + (col/id), BLOCK, num);
@@ -108,12 +91,7 @@ void update_stack(Board* board){
 		//std::cout << copy_board->cells_solved << "\n";
 		if (copy_board->cells[row][col][num]){
 			update_solution_bf(copy_board, row, col, num+1);
-      #ifdef PARALLEL
-        #pragma omp critical
-			  boards.push(copy_board);
-      #else
-        boards.push(copy_board);
-      #endif
+			boards.push(copy_board);
 		}
 	}
 }
@@ -133,41 +111,27 @@ void parallel_brute_force(Board* bf_board, int total){
     board = bf_board;
     
     //print_board(board);
-    //std::cout << "SOLVED\n";
+    std::cout << "SOLVED\n";
 		return;
 	}
-  #ifdef PARALLEL
-    #pragma omp parallel firstprivate(bf_board, total)
-    {
-      
-      update_stack(bf_board);
-      if (boards.empty()){
-      }
-      else{
-        #pragma omp critical
-        next_board = boards.top();
-      }
 
-      if (next_board != NULL){
-        #pragma omp critical
-        boards.pop();
-        parallel_brute_force(next_board, total);
-      }
-	  }
-  #else
+  #pragma omp parallel firstprivate(bf_board, total)
+  {
+    
     update_stack(bf_board);
     if (boards.empty()){
-      std::cerr << "ERROR: Stack is empty\n";
     }
     else{
+      #pragma omp critical
       next_board = boards.top();
-
     }
 
     if (next_board != NULL){
+      #pragma omp critical
       boards.pop();
       parallel_brute_force(next_board, total);
     }
-  #endif
+  }
+
 
 }
