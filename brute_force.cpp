@@ -16,14 +16,14 @@ Board* create_copy_board(Board* b){
 }
 
 /* Returns false if it found a cell with no remaining values */
-bool choose_cell_bf(Board* board, int &row, int &col) {
-  int least = board->dim+1, counter;
-  for(int r = 0; r < board->dim; r++) {
-    for(int c = 0; c < board->dim; c++) {
+bool choose_cell_bf(Board* b, int &row, int &col) {
+  int least = b->dim+1, counter;
+  for(int r = 0; r < b->dim; r++) {
+    for(int c = 0; c < b->dim; c++) {
       counter = 0;
-      if(!board->solution[r][c]) {
-        for(int num = 0; num < board->dim; num++) {
-          if(board->cells[r][c][num]) {
+      if(!b->solution[r][c]) {
+        for(int num = 0; num < b->dim; num++) {
+          if(b->cells[r][c][num]) {
             counter++;
           }
         }
@@ -87,7 +87,6 @@ void update_stack(Board* b){
 
   if(choose_cell_bf(b, row, col)) {
     for (int num = 0; num < b->dim; num++){
-		  //std::cout << copy_board->cells_solved << "\n";
       if (b->cells[row][col][num]){
         copy_board = create_copy_board(b);
 			  update_solution_bf(copy_board, row, col, num+1);
@@ -119,8 +118,10 @@ void parallel_brute_force() {
       if(curr_board) {
         if(curr_board->cells_solved < total) {
           update_stack(curr_board);
+          //delete curr_board;
         } else {
           std::cout << "BRUTE FORCE SOLVED\n";
+          //delete board;
           board = curr_board;
           break;
         }

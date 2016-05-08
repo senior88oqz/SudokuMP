@@ -243,19 +243,19 @@ bool triplets(int i, Align align) {
 /********************************************************************/
 
 
-void print_cells() {
+void print_cells(Board* b) {
   std::ostringstream stm;
-  for(int r = 0; r < board->dim; r++) {
-    for(int c = 0; c < board->dim; c++) {
-      for(int num = 0; num < board->dim; num++) {
-        stm << board->cells[r][c][num];
+  for(int r = 0; r < b->dim; r++) {
+    for(int c = 0; c < b->dim; c++) {
+      for(int num = 0; num < b->dim; num++) {
+        stm << b->cells[r][c][num];
       }
       stm << " ";
-      if((c+1) % board->inner_dim == 0)
+      if((c+1) % b->inner_dim == 0)
         stm << " ";
     }
     stm << "\n";
-    if((r+1) % board->inner_dim == 0)
+    if((r+1) % b->inner_dim == 0)
       stm << "\n";
   }
   std::cout << stm.str();

@@ -59,7 +59,7 @@ extern Board* board;
 void clear_number(int i, Align align, int value);
 
 /* Prints the cells of possible values */
-void print_cells();
+void print_cells(Board* b);
 
 /* Prints the solution board */
 void print_board(Board* b);
