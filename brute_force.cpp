@@ -35,7 +35,7 @@ bool choose_cell_bf(Board* b, int &row, int &col) {
       }
     }
   }
-  return (counter != 0);
+  return (least != 0);
 }
 
 void clear_number_bf(Board* board, int i, Align align, int value) {
