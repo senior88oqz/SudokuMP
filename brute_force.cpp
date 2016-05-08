@@ -1,6 +1,9 @@
 #include "brute_force.h"
 #include <omp.h>
 
+omp_lock_t stack_lock;
+bool solution_found;
+
 Board* create_copy_board(Board* b){
   Board* copy_board = new Board(b->dim);
 	for(int row = 0; row < b->dim; row++) {
@@ -90,11 +93,10 @@ void update_stack(Board* b){
       if (b->cells[row][col][num]){
         copy_board = create_copy_board(b);
 			  update_solution_bf(copy_board, row, col, num+1);
-        #pragma omp critical
-        {
-          boards.push(copy_board);
-        }
-		  }
+        omp_set_lock(&stack_lock);
+        boards.push(copy_board);
+        omp_unset_lock(&stack_lock);
+      }
 	  }
   }
 }
@@ -103,31 +105,33 @@ void parallel_brute_force() {
   Board* curr_board;
   int total = board->dim * board->dim;
   boards.push(board);
+  solution_found = 0;
 
-  #pragma omp parallel
+  #pragma omp parallel private(curr_board)
   {
-    while(1) {
+    while(!solution_found) {
       curr_board = NULL;
-      #pragma omp critical
-      {
-        if(!boards.empty()) {
-          curr_board = boards.top();
-          boards.pop();
-        }
+
+      omp_set_lock(&stack_lock);
+      if(!boards.empty()) {
+        curr_board = boards.top();
+        boards.pop();
       }
+      omp_unset_lock(&stack_lock);
+
       if(curr_board) {
         if(curr_board->cells_solved < total) {
           update_stack(curr_board);
-          //delete curr_board;
+          delete curr_board;
         } else {
           std::cout << "BRUTE FORCE SOLVED\n";
-          //delete board;
+          solution_found = 1;
           board = curr_board;
           break;
         }
       } else {
-        std::cerr << "ERROR: Brute force stack is empty\n";
-        break;
+        //std::cerr << "ERROR: Brute force stack is empty\n";
+        //break;
       }
     }
   }
