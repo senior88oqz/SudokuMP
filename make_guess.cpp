@@ -36,7 +36,7 @@ void make_guess() {
   new_state->guess = guess;
   states.push(new_state);
 
-  update_solution(row, col, guess);
+  update_solution(board, row, col, guess);
 }
 
 void backtrack() {
@@ -76,6 +76,6 @@ void backtrack() {
 
   old_state->guess = new_guess;
 
-  update_solution(row, col, new_guess);
+  update_solution(board, row, col, new_guess);
 
 }

@@ -37,9 +37,6 @@ struct State
 /* Global stack for saving states before guessing */
 extern std::stack<State*> states;
 
-/* Global stack for saving boards before guessing */
-extern std::stack<Board*> boards;
-
 
 /* Choose the cell with the least possible values left to guess
  * Save the current board state in the stack

@@ -6,6 +6,10 @@
 #include <iostream>
 #include <time.h>
 
+#define NUM_THREADS 1
+#define BRUTE_FORCE
+
+
 enum Align {ROW, COL, BLOCK};
 
 struct Board
@@ -56,8 +60,6 @@ struct Board
 /* Global board struct */
 extern Board* board;
 
-void clear_number(int i, Align align, int value);
-
 /* Prints the cells of possible values */
 void print_cells(Board* b);
 
@@ -67,8 +69,8 @@ void print_board(Board* b);
 /* Creates a board with initialized values, store in global variable */
 bool create_board(char* filename, int dim);
 
-/* Updates board->solutions and clears neighboring cells of num */
-void update_solution(int row, int col, int num);
+/* Updates b->solutions and clears neighboring cells of num */
+void update_solution(Board* b, int row, int col, int num);
 
 /* Solve the sudoku board using the humanistic method */
 void solve();
